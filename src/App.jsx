@@ -23,15 +23,12 @@ function App() {
 
   const fetchMembers = async () => {
     try {
-      let url = "http://127.0.0.1:8000/members";
-      if (filter !== "all") {
-        url += `?status=${filter}`;
-      }
-      const response = await fetch(url);
+      const response = await fetch("http://127.0.0.1:8000/members");
       if (!response.ok) throw new Error("Failed to fetch members");
+
       const data = await response.json();
       console.log("Fetched members:", data);
-      setMembers(data);
+      setMembers(data); // Update the state with the fetched members
     } catch (error) {
       console.error("Error fetching members:", error);
     }
@@ -79,6 +76,12 @@ function App() {
     } else {
       alert("Invalid username or password");
     }
+  };
+
+  const getMemberStatus = (membershipEndDate) => {
+    const currentDate = new Date();
+    const endDate = new Date(membershipEndDate);
+    return endDate < currentDate ? "expired" : "active";
   };
 
   if (!loggedIn) {
@@ -199,12 +202,16 @@ function App() {
             <th>Phone</th>
             <th>Membership Start</th>
             <th>Membership End</th>
+            <th>Status</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody>
           {members
-            .filter((m) => m.name?.toLowerCase().includes(searchQuery.toLowerCase()))
+            .filter((m) => 
+              m.name?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+              (filter === "all" || getMemberStatus(m.membership_end) === filter)  // Filter by active or expired status
+            )
             .map((member, index) => (
               <tr key={member.id}>
                 <td>{index + 1}</td>
@@ -213,6 +220,7 @@ function App() {
                 <td>{member.phone}</td>
                 <td>{new Date(member.membership_start).toLocaleDateString()}</td>
                 <td>{new Date(member.membership_end).toLocaleDateString()}</td>
+                <td>{getMemberStatus(member.membership_end)}</td>
                 <td>
                   <button className="btn btn-danger btn-sm" onClick={() => deleteMember(member.id)}>Delete</button>
                 </td>
