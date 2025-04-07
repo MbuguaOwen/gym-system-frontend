@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+import * as XLSX from 'xlsx';  // Importing xlsx library
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -132,6 +133,21 @@ function App() {
     });
   };
 
+  // Function to handle exporting to Excel
+  const exportToExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(members.map(member => ({
+      Name: member.name,
+      Email: member.email,
+      Phone: member.phone,
+      "Membership Start": new Date(member.membership_start).toLocaleDateString(),
+      "Membership End": new Date(member.membership_end).toLocaleDateString(),
+      Status: getMemberStatus(member.membership_end),
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Members");
+    XLSX.writeFile(wb, "members_list.xlsx");
+  };
+
   if (!loggedIn) {
     return (
       <div className="container mt-5">
@@ -169,6 +185,8 @@ function App() {
         <h3 className="mb-0">Gym Members Management</h3>
         <button className="btn btn-outline-danger" onClick={logout}>Logout</button>
       </div>
+
+      <button className="btn btn-success mb-3" onClick={exportToExcel}>Export to Excel</button>
 
       <form className="mb-4 shadow p-3 rounded" onSubmit={addMember}>
         <div className="row g-2">
@@ -270,60 +288,96 @@ function App() {
                 <td>{new Date(member.membership_end).toLocaleDateString()}</td>
                 <td>{getMemberStatus(member.membership_end)}</td>
                 <td>
-                  <button className="btn btn-warning btn-sm" onClick={() => openEditModal(member)}>Edit</button>
-                  <button className="btn btn-danger btn-sm" onClick={() => deleteMember(member.id)}>Delete</button>
+                  <button
+                    className="btn btn-warning btn-sm"
+                    onClick={() => openEditModal(member)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => deleteMember(member.id)}
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}
         </tbody>
       </table>
 
+      {/* Edit Modal */}
       {selectedMember && (
-        <div className="modal" tabIndex="-1" style={{ display: "block", zIndex: 9999 }}>
+        <div className="modal show" style={{ display: 'block' }}>
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Edit Member</h5>
-                <button type="button" className="btn-close" onClick={() => setSelectedMember(null)}></button>
+                <button
+                  className="btn-close"
+                  onClick={() => setSelectedMember(null)}
+                ></button>
               </div>
               <div className="modal-body">
-                <form onSubmit={(e) => { e.preventDefault(); updateMember(); }}>
-                  <input
-                    type="text"
-                    className="form-control mb-2"
-                    value={editFormData.name}
-                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                    required
-                  />
-                  <input
-                    type="email"
-                    className="form-control mb-2"
-                    value={editFormData.email}
-                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                    required
-                  />
-                  <input
-                    type="text"
-                    className="form-control mb-2"
-                    value={editFormData.phone}
-                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                    required
-                  />
-                  <input
-                    type="date"
-                    className="form-control mb-2"
-                    value={editFormData.membership_start}
-                    onChange={(e) => setEditFormData({ ...editFormData, membership_start: e.target.value })}
-                    required
-                  />
-                  <input
-                    type="date"
-                    className="form-control mb-2"
-                    value={editFormData.membership_end}
-                    onChange={(e) => setEditFormData({ ...editFormData, membership_end: e.target.value })}
-                    required
-                  />
-                  <button type="submit" className="btn btn-primary w-100">Save Changes</button>
+                <form onSubmit={updateMember}>
+                  <div className="mb-3">
+                    <label className="form-label">Name</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editFormData.name}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, name: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Email</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      value={editFormData.email}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, email: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Phone</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editFormData.phone}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, phone: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Membership Start</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={editFormData.membership_start}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, membership_start: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Membership End</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={editFormData.membership_end}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, membership_end: e.target.value })
+                      }
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary w-100">
+                    Update Member
+                  </button>
                 </form>
               </div>
             </div>
