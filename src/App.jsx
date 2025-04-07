@@ -114,7 +114,7 @@ function App() {
   const getMemberStatus = (membershipEndDate) => {
     const currentDate = new Date();
     const endDate = new Date(membershipEndDate);
-    return endDate < currentDate ? "expired" : "active";
+    return endDate < currentDate ? "Expired" : "Active";
   };
 
   const logout = () => {
@@ -128,12 +128,12 @@ function App() {
       name: member.name,
       email: member.email,
       phone: member.phone,
-      membership_start: member.membership_start.slice(0, 10), // Get date in yyyy-mm-dd format
-      membership_end: member.membership_end.slice(0, 10), // Get date in yyyy-mm-dd format
+      membership_start: member.membership_start.slice(0, 10),
+      membership_end: member.membership_end.slice(0, 10),
     });
   };
 
-  // Function to handle exporting to Excel
+  // Export to Excel function
   const exportToExcel = () => {
     const ws = XLSX.utils.json_to_sheet(members.map(member => ({
       Name: member.name,
@@ -195,9 +195,9 @@ function App() {
               type="text"
               className="form-control"
               placeholder="Name"
-              required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
             />
           </div>
           <div className="col-md-2">
@@ -205,9 +205,9 @@ function App() {
               type="email"
               className="form-control"
               placeholder="Email"
-              required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
             />
           </div>
           <div className="col-md-2">
@@ -215,27 +215,27 @@ function App() {
               type="text"
               className="form-control"
               placeholder="Phone"
-              required
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              required
             />
           </div>
           <div className="col-md-2">
             <input
               type="date"
               className="form-control"
-              required
               value={formData.membership_start}
               onChange={(e) => setFormData({ ...formData, membership_start: e.target.value })}
+              required
             />
           </div>
           <div className="col-md-2">
             <input
               type="date"
               className="form-control"
-              required
               value={formData.membership_end}
               onChange={(e) => setFormData({ ...formData, membership_end: e.target.value })}
+              required
             />
           </div>
           <div className="col-md-2">
@@ -262,7 +262,6 @@ function App() {
       <table className="table table-striped shadow">
         <thead className="table-dark">
           <tr>
-            <th>#</th>
             <th>Name</th>
             <th>Email</th>
             <th>Phone</th>
@@ -273,111 +272,91 @@ function App() {
           </tr>
         </thead>
         <tbody>
-          {members
-            .filter((m) =>
-              m.name?.toLowerCase().includes(searchQuery.toLowerCase()) &&
-              (filter === "all" || getMemberStatus(m.membership_end) === filter)
-            )
-            .map((member, index) => (
-              <tr key={member.id}>
-                <td>{index + 1}</td>
-                <td>{member.name}</td>
-                <td>{member.email}</td>
-                <td>{member.phone}</td>
-                <td>{new Date(member.membership_start).toLocaleDateString()}</td>
-                <td>{new Date(member.membership_end).toLocaleDateString()}</td>
-                <td>{getMemberStatus(member.membership_end)}</td>
-                <td>
-                  <button
-                    className="btn btn-warning btn-sm"
-                    onClick={() => openEditModal(member)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={() => deleteMember(member.id)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+          {members.filter((member) => {
+            const isSearchMatch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              member.phone.toLowerCase().includes(searchQuery.toLowerCase());
+            const isStatusMatch = filter === "all" || filter === getMemberStatus(member.membership_end).toLowerCase();
+            return isSearchMatch && isStatusMatch;
+          }).map((member) => (
+            <tr key={member.id}>
+              <td>{member.name}</td>
+              <td>{member.email}</td>
+              <td>{member.phone}</td>
+              <td>{new Date(member.membership_start).toLocaleDateString()}</td>
+              <td>{new Date(member.membership_end).toLocaleDateString()}</td>
+              <td>{getMemberStatus(member.membership_end)}</td>
+              <td>
+                <button className="btn btn-warning" onClick={() => openEditModal(member)}>Edit</button>
+                <button className="btn btn-danger" onClick={() => deleteMember(member.id)}>Delete</button>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
 
-      {/* Edit Modal */}
       {selectedMember && (
-        <div className="modal show" style={{ display: 'block' }}>
+        <div className="modal fade show" tabIndex="-1" style={{ display: "block", backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Edit Member</h5>
-                <button
-                  className="btn-close"
-                  onClick={() => setSelectedMember(null)}
-                ></button>
+                <button type="button" className="btn-close" data-bs-dismiss="modal" onClick={() => setSelectedMember(null)}></button>
               </div>
               <div className="modal-body">
-                <form onSubmit={updateMember}>
+                <form onSubmit={(e) => { e.preventDefault(); updateMember(); }}>
                   <div className="mb-3">
-                    <label className="form-label">Name</label>
                     <input
                       type="text"
                       className="form-control"
+                      placeholder="Name"
                       value={editFormData.name}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, name: e.target.value })
-                      }
+                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                      required
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Email</label>
                     <input
                       type="email"
                       className="form-control"
+                      placeholder="Email"
                       value={editFormData.email}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, email: e.target.value })
-                      }
+                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                      required
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Phone</label>
                     <input
                       type="text"
                       className="form-control"
+                      placeholder="Phone"
                       value={editFormData.phone}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, phone: e.target.value })
-                      }
+                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                      required
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Membership Start</label>
                     <input
                       type="date"
                       className="form-control"
                       value={editFormData.membership_start}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, membership_start: e.target.value })
-                      }
+                      onChange={(e) => setEditFormData({ ...editFormData, membership_start: e.target.value })}
+                      required
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Membership End</label>
                     <input
                       type="date"
                       className="form-control"
                       value={editFormData.membership_end}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, membership_end: e.target.value })
-                      }
+                      onChange={(e) => setEditFormData({ ...editFormData, membership_end: e.target.value })}
+                      required
                     />
                   </div>
-                  <button type="submit" className="btn btn-primary w-100">
-                    Update Member
-                  </button>
+                  <div className="d-flex justify-content-between">
+                    <button type="submit" className="btn btn-primary">Save Changes</button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setSelectedMember(null)}>Cancel</button>
+                  </div>
                 </form>
               </div>
             </div>
