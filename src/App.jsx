@@ -14,6 +14,14 @@ function App() {
     membership_start: "",
     membership_end: "",
   });
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    membership_start: "",
+    membership_end: "",
+  });
+  const [selectedMember, setSelectedMember] = useState(null);
 
   useEffect(() => {
     if (loggedIn) {
@@ -25,10 +33,8 @@ function App() {
     try {
       const response = await fetch("http://127.0.0.1:8000/members");
       if (!response.ok) throw new Error("Failed to fetch members");
-
       const data = await response.json();
-      console.log("Fetched members:", data);
-      setMembers(data); // Update the state with the fetched members
+      setMembers(data);
     } catch (error) {
       console.error("Error fetching members:", error);
     }
@@ -41,7 +47,6 @@ function App() {
       membership_start: new Date(formData.membership_start).toISOString(),
       membership_end: new Date(formData.membership_end).toISOString(),
     };
-
     try {
       const response = await fetch("http://127.0.0.1:8000/members", {
         method: "POST",
@@ -53,6 +58,33 @@ function App() {
       setFormData({ name: "", email: "", phone: "", membership_start: "", membership_end: "" });
     } catch (error) {
       console.error("Error adding member:", error);
+    }
+  };
+
+  const updateMember = async () => {
+    const formattedData = {
+      ...editFormData,
+      membership_start: new Date(editFormData.membership_start).toISOString(),
+      membership_end: new Date(editFormData.membership_end).toISOString(),
+    };
+
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/members/${selectedMember.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formattedData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update member");
+      }
+
+      fetchMembers(); // Refresh list
+      setSelectedMember(null); // Close modal
+    } catch (error) {
+      console.error("Error updating member:", error);
     }
   };
 
@@ -82,6 +114,22 @@ function App() {
     const currentDate = new Date();
     const endDate = new Date(membershipEndDate);
     return endDate < currentDate ? "expired" : "active";
+  };
+
+  const logout = () => {
+    setLoggedIn(false);
+    setCredentials({ username: "", password: "" });
+  };
+
+  const openEditModal = (member) => {
+    setSelectedMember(member);
+    setEditFormData({
+      name: member.name,
+      email: member.email,
+      phone: member.phone,
+      membership_start: member.membership_start.slice(0, 10), // Get date in yyyy-mm-dd format
+      membership_end: member.membership_end.slice(0, 10), // Get date in yyyy-mm-dd format
+    });
   };
 
   if (!loggedIn) {
@@ -117,9 +165,11 @@ function App() {
 
   return (
     <div className="container mt-4">
-      <h3 className="mb-4 text-center">Gym Members Management</h3>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h3 className="mb-0">Gym Members Management</h3>
+        <button className="btn btn-outline-danger" onClick={logout}>Logout</button>
+      </div>
 
-      {/* Member Registration Form */}
       <form className="mb-4 shadow p-3 rounded" onSubmit={addMember}>
         <div className="row g-2">
           <div className="col-md-2">
@@ -176,7 +226,6 @@ function App() {
         </div>
       </form>
 
-      {/* Search & Filter */}
       <div className="d-flex justify-content-between mb-3">
         <input
           type="text"
@@ -192,7 +241,6 @@ function App() {
         </select>
       </div>
 
-      {/* Members Table */}
       <table className="table table-striped shadow">
         <thead className="table-dark">
           <tr>
@@ -203,14 +251,14 @@ function App() {
             <th>Membership Start</th>
             <th>Membership End</th>
             <th>Status</th>
-            <th>Action</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {members
-            .filter((m) => 
+            .filter((m) =>
               m.name?.toLowerCase().includes(searchQuery.toLowerCase()) &&
-              (filter === "all" || getMemberStatus(m.membership_end) === filter)  // Filter by active or expired status
+              (filter === "all" || getMemberStatus(m.membership_end) === filter)
             )
             .map((member, index) => (
               <tr key={member.id}>
@@ -222,12 +270,66 @@ function App() {
                 <td>{new Date(member.membership_end).toLocaleDateString()}</td>
                 <td>{getMemberStatus(member.membership_end)}</td>
                 <td>
+                  <button className="btn btn-warning btn-sm" onClick={() => openEditModal(member)}>Edit</button>
                   <button className="btn btn-danger btn-sm" onClick={() => deleteMember(member.id)}>Delete</button>
                 </td>
               </tr>
             ))}
         </tbody>
       </table>
+
+      {selectedMember && (
+        <div className="modal" tabIndex="-1" style={{ display: "block", zIndex: 9999 }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Edit Member</h5>
+                <button type="button" className="btn-close" onClick={() => setSelectedMember(null)}></button>
+              </div>
+              <div className="modal-body">
+                <form onSubmit={(e) => { e.preventDefault(); updateMember(); }}>
+                  <input
+                    type="text"
+                    className="form-control mb-2"
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    required
+                  />
+                  <input
+                    type="email"
+                    className="form-control mb-2"
+                    value={editFormData.email}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    required
+                  />
+                  <input
+                    type="text"
+                    className="form-control mb-2"
+                    value={editFormData.phone}
+                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                    required
+                  />
+                  <input
+                    type="date"
+                    className="form-control mb-2"
+                    value={editFormData.membership_start}
+                    onChange={(e) => setEditFormData({ ...editFormData, membership_start: e.target.value })}
+                    required
+                  />
+                  <input
+                    type="date"
+                    className="form-control mb-2"
+                    value={editFormData.membership_end}
+                    onChange={(e) => setEditFormData({ ...editFormData, membership_end: e.target.value })}
+                    required
+                  />
+                  <button type="submit" className="btn btn-primary w-100">Save Changes</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
